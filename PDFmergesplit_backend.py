@@ -12,7 +12,7 @@ class PDFMergeSplit(QObject):
     https://pythonhosted.org/PyPDF2/PdfFileReader.html
     """
     def __init__(self):
-        self._filepath = ""
+        self._filepaths = []
         self._file = None
         
         
@@ -40,15 +40,15 @@ class PDFMergeSplit(QObject):
 
     @property
     def filepath(self):
-        return self._filepath
+        return self._filepaths[-1]
     
     @filepath.setter
     def filepath(self, filepath):
-        self._filepath = filepath
+        self._filepaths.append(filepath)
     
     @filepath.deleter
     def filepath(self):
-        self._filepath = ""
+        self._filepaths.pop(-1)
     
 
     @property
