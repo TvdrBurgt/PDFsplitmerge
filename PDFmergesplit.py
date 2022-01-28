@@ -11,7 +11,7 @@ import logging
 
 
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtWidgets import QWidget, QGridLayout, QGroupBox, QLineEdit, QPushButton, QLabel, QCheckBox
+from PyQt5.QtWidgets import QWidget, QGridLayout, QGroupBox, QLineEdit, QPushButton, QLabel, QCheckBox, QProgressBar
 
 from PDFmergesplit_backend import PDFMergeSplit
 
@@ -107,12 +107,21 @@ class GUI(QWidget):
         
         
         """
+        # --------------------------- Progress bar ----------------------------
+        """
+        
+        self.progressbar = QProgressBar()
+        self.progressbar.setTextVisible(False)
+        self.progressbar.setValue(0)
+        
+        """
         ---------------------- Add widgets and set Layout ---------------------
         """
         master = QGridLayout()
         master.addWidget(filesearchContainer, 0, 0, 1, 2)
         master.addWidget(filepreviewContainer, 1, 0, 1, 1)
         master.addWidget(fileeditorContainer, 1, 1, 1, 1)
+        master.addWidget(self.progressbar, 2, 0, 1, 2)
         self.setLayout(master)
         
         """
@@ -121,6 +130,8 @@ class GUI(QWidget):
         =======================================================================
         """
         self.backend = PDFMergeSplit()
+        
+        self.backend.progress.connect(self.update_progressbar)
         
         """
         =======================================================================
@@ -159,6 +170,7 @@ class GUI(QWidget):
         self.lineedit_filepath.setText("")
         self.label_filesindicator.setText("File added: ")
         self.label_pagecount.setText("Number of pages: ")
+        self.progressbar.reset()
         
     
     def preview(self):
@@ -186,6 +198,9 @@ class GUI(QWidget):
             self.backend.split_and_merge(pages)
         else:
             self.backend.split(pages)
+    
+    def update_progressbar(self, percentage):
+        self.progressbar.setValue(percentage)
 
 
 

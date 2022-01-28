@@ -5,13 +5,17 @@ Created on Sun Jan 23 11:21:46 2022
 @author: tvdrb
 """
 from PyPDF2 import PdfFileWriter, PdfFileReader
-from PyQt5.QtCore import QObject
+from PyQt5.QtCore import QObject, pyqtSignal
 
 class PDFMergeSplit(QObject):
     """ Documentation
     https://pythonhosted.org/PyPDF2/PdfFileReader.html
     """
+    
+    progress = pyqtSignal(int)
+    
     def __init__(self):
+        super().__init__()
         self._filepath = ""
         self._file = None
         
@@ -28,6 +32,7 @@ class PDFMergeSplit(QObject):
                 output.addPage(self.file.getPage(i))
         with open((self.filepath.rsplit('/')[-1].rstrip('.pdf') + "_split&stitched.pdf"), "wb") as outputStream:
             output.write(outputStream)
+        self.progress.emit(100)
     
     def split(self, pages):
         for i in range(self.file.numPages):
@@ -36,6 +41,7 @@ class PDFMergeSplit(QObject):
                 output.addPage(self.file.getPage(i))
                 with open((self.filepath.rsplit('/')[-1].rstrip('.pdf') + "_page%s.pdf" % (i+1)), "wb") as outputStream:
                     output.write(outputStream)
+        self.progress.emit(100)
 
 
     @property
