@@ -2,8 +2,9 @@
 __pycache__/
 
 # Visual studio code
-.vscode/*      # Maybe .vscode/**/* instead - see comments
-!.vscode/settings.json
+.vscode/
+# .vscode/*      # Maybe .vscode/**/* instead - see comments
+#!.vscode/settings.json
 
 # File extensions
-.pdf
+*.pdf
