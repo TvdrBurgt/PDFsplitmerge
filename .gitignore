@@ -1,0 +1,9 @@
+# Bytecode folder
+__pycache__/
+
+# Visual studio code
+.vscode/*      # Maybe .vscode/**/* instead - see comments
+!.vscode/settings.json
+
+# File extensions
+.pdf
