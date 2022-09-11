@@ -10,8 +10,9 @@ import sys
 import logging
 
 
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtWidgets import QWidget, QGridLayout, QGroupBox, QLineEdit, QPushButton, QLabel, QCheckBox, QProgressBar
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
 
 from PDFmergesplit_backend import PDFMergeSplit
 
@@ -76,10 +77,13 @@ class GUI(QWidget):
         self.label_pagecount = QLabel("Number of pages: ")
         
         # preview
+        self.webview_preview = QWebEngineView()
+
         button = QPushButton(text="Preview", clicked=self.preview)
         
         filepreviewLayout.addWidget(self.label_pagecount, 0, 0, 1, 1)
         filepreviewLayout.addWidget(button, 1, 0, 1, 1)
+        filepreviewLayout.addWidget(self.webview_preview, 2, 0, 2, 2)
         filepreviewContainer.setLayout(filepreviewLayout)
         
         
@@ -175,6 +179,10 @@ class GUI(QWidget):
     
     def preview(self):
         print("Here comes a preview window")
+        self.webview_preview.settings().setAttribute( QWebEngineSettings.PluginsEnabled, True)
+        self.webview_preview.settings().setAttribute( QWebEngineSettings.PdfViewerEnabled, True)
+        self.webview_preview.load(QtCore.QUrl.fromUserInput(self.backend.filepath))
+    
     
     def split(self):
         # parse string to comma-separated string array
