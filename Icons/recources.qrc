@@ -1,0 +1,7 @@
+<RCC>
+  <qresource prefix="Icons">
+    <file>ICON_BROWSE.png</file>
+    <file>ICON_DELETE.png</file>
+    <file>ICON_OPEN.svg</file>
+  </qresource>
+</RCC>
