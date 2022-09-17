@@ -17,6 +17,8 @@ To do:
 - Preview button functionality
 - unittests
 - GUI formatting
+- Extend to different datatypes (pip install img2pdf)
+- Drag files to GUI (replace File-search bar with a big button)
 """
 
 
