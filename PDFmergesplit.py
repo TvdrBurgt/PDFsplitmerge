@@ -1,235 +1,232 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Jan 23 09:35:22 2022
-
-@author: tvdrb
-"""
-
 import os
 import sys
-import logging
+
+from datetime import datetime
+from PyPDF2 import PdfWriter, PdfReader
+from PyQt5.QtCore import QObject, QUrl
+from PyQt5.QtWidgets import QApplication, QDialog, QFileDialog
+from PyQt5.QtWebEngineWidgets import QWebEngineSettings
+from PyQt5.uic import loadUi
+
+import resources
 
 
-from PyQt5 import QtWidgets, QtGui, QtCore
-from PyQt5.QtWidgets import QWidget, QGridLayout, QGroupBox, QLineEdit, QPushButton, QLabel, QCheckBox, QProgressBar
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
+"""
+To do:
+- Give more space to QWebEngine to show page numbers
+- Preview button functionality
+- unittests
+- GUI formatting
+"""
 
-from PDFmergesplit_backend import PDFMergeSplit
 
-global path
-path = os.path.dirname(os.path.realpath(__file__))
-os.chdir(path)
 
-class GUI(QWidget):
+class View(QDialog):
     def __init__(self):
         super().__init__()
-        """
-        =======================================================================
-        ----------------------------- Start of GUI ----------------------------
-        =======================================================================
-        """
-        """
-        # ---------------------- General widget settings ----------------------
-        """
-        self.setWindowTitle("PDF split and merge")
-        
-        """
-        # ---------------------------- Select file ----------------------------
-        """
-        filesearchContainer = QGroupBox(title="Select file")
-        filesearchLayout = QGridLayout()
-        
-        # LineEdit - file path
-        self.lineedit_filepath = QLineEdit()
-        self.lineedit_filepath.setPlaceholderText("File path")
-        
-        # Label - files indicator
-        self.label_filesindicator = QLabel("File added: ")
-        
-        # Button - search pdf
-        button_findpdf = QPushButton(clicked=self.search_file)
-        button_findpdf.setIcon(QtGui.QIcon(path+"/Icons/ICON_BROWSE.png"))
-        
-        # Button - load pdf
-        button_openpdf = QPushButton(clicked=self.open_file)
-        button_openpdf.setIcon(QtGui.QIcon(path+"/Icons/ICON_OPEN.svg"))
-        
-        # Button - close pdf
-        button_closepdf = QPushButton(clicked=self.close_file)
-        button_closepdf.setIcon(QtGui.QIcon(path+"/Icons/ICON_DELETE.png"))
-        
-        filesearchLayout.addWidget(self.lineedit_filepath, 0, 0, 1, 1)
-        filesearchLayout.addWidget(self.label_filesindicator, 1, 0, 1, 4)
-        filesearchLayout.addWidget(button_findpdf, 0, 1, 1, 1)
-        filesearchLayout.addWidget(button_openpdf, 0, 2, 1, 1)
-        filesearchLayout.addWidget(button_closepdf, 0, 3, 1, 1)
-        filesearchContainer.setLayout(filesearchLayout)
-        filesearchContainer.setMaximumHeight(100)
-        
-        
-        """
-        # --------------------------- File preview ----------------------------
-        """
-        filepreviewContainer = QGroupBox(title="File preview")
-        filepreviewLayout = QGridLayout()
-        
-        # Label - number of pages
-        self.label_pagecount = QLabel("Number of pages: ")
-        
-        # preview
-        self.webview_preview = QWebEngineView()
+        loadUi("GUI_v1.ui", self)
 
-        button = QPushButton(text="Preview", clicked=self.preview)
-        
-        filepreviewLayout.addWidget(self.label_pagecount, 0, 0, 1, 1)
-        filepreviewLayout.addWidget(button, 1, 0, 1, 1)
-        filepreviewLayout.addWidget(self.webview_preview, 2, 0, 2, 2)
-        filepreviewContainer.setLayout(filepreviewLayout)
-        
-        
-        """
-        # ----------------------------- Edit file -----------------------------
-        """
-        fileeditorContainer = QGroupBox(title="Edit file")
-        fileeditorLayout = QGridLayout()
-        
-        # Lineedit - select pages
-        self.lineedit_selectpages = QLineEdit()
-        self.lineedit_selectpages.setPlaceholderText("Select page numbers comma separated")
-        
-        # Checkbox - stitch splitted pages
-        self.checkbox_stitch = QCheckBox(text="Stitch pages")
-        
-        # Button - split pdf
-        button_split = QPushButton(text="Split", clicked=self.split)
-        
-        fileeditorLayout.addWidget(self.lineedit_selectpages, 0, 0, 1, 1)
-        fileeditorLayout.addWidget(self.checkbox_stitch, 0, 1, 1, 1)
-        fileeditorLayout.addWidget(button_split, 1, 0, 1, 2)
-        fileeditorContainer.setLayout(fileeditorLayout)
-        fileeditorContainer.setMinimumWidth(400)
-        
-        
-        """
-        # --------------------------- Progress bar ----------------------------
-        """
-        
-        self.progressbar = QProgressBar()
-        self.progressbar.setTextVisible(False)
-        self.progressbar.setValue(0)
-        
-        """
-        ---------------------- Add widgets and set Layout ---------------------
-        """
-        master = QGridLayout()
-        master.addWidget(filesearchContainer, 0, 0, 1, 2)
-        master.addWidget(filepreviewContainer, 1, 0, 1, 1)
-        master.addWidget(fileeditorContainer, 1, 1, 1, 1)
-        master.addWidget(self.progressbar, 2, 0, 1, 2)
-        self.setLayout(master)
-        
-        """
-        =======================================================================
-        -------------- Start up backend and connect signals/slots--------------
-        =======================================================================
-        """
-        self.backend = PDFMergeSplit()
-        
-        self.backend.progress.connect(self.update_progressbar)
-        
-        """
-        =======================================================================
-        ----------------------------- End of GUI ------------------------------
-        =======================================================================
-        """
+    def reset_lineedit_filepath(self):
+        self.lineedit_filepath.setText("File path")
     
-    
-    def closeEvent(self, event):
-        event.accept()
-        QtWidgets.QApplication.quit()
-    
+    def reset_lineedit_pages(self):
+        self.lineedit_selectpages.setText("Select pages, comma separated")
 
-    def search_file(self):
-        filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
+    def file_load(self) -> str:
+        filepath,_ = QFileDialog.getOpenFileName(
             parent=self,
             caption="Choose File",
             directory="",
             filter="PDF Files (*.pdf)" 
         )
-        self.backend.filepath = filepath
-        self.lineedit_filepath.setText(filepath)
+        return filepath
     
-    
-    def open_file(self):
-        filepath = self.backend.filepath
-        pdf = open(filepath, "rb")
-        self.backend.file = pdf
-        self.label_filesindicator.setText("File added: " + filepath.rsplit('/')[-1])
-        self.label_pagecount.setText("Number of pages: " + str(self.backend.file.numPages))
-    
-    
-    def close_file(self):
-        del self.backend.filepath
-        del self.backend.file
-        self.lineedit_filepath.setText("")
-        self.label_filesindicator.setText("File added: ")
-        self.label_pagecount.setText("Number of pages: ")
-        self.progressbar.reset()
-        
-    
-    def preview(self):
-        print("Here comes a preview window")
-        self.webview_preview.settings().setAttribute( QWebEngineSettings.PluginsEnabled, True)
-        self.webview_preview.settings().setAttribute( QWebEngineSettings.PdfViewerEnabled, True)
-        self.webview_preview.load(QtCore.QUrl.fromUserInput(self.backend.filepath))
-    
-    
-    def split(self):
-        # parse string to comma-separated string array
-        pages_intext = self.lineedit_selectpages.text()
-        pages_intextarray = list(pages_intext.split(","))
-        
-        # fill in the page gaps
-        pages = []
-        for idx,string in enumerate(pages_intextarray):
-            if string == '':
-                previous_page = pages[-1]
-                next_page = int(pages_intextarray[idx+1])
-                for p in range(previous_page+1, next_page):
-                    pages.append(p)
-            else:
-                pages.append(int(string))
-        self.lineedit_selectpages.setText(str(pages).strip('[]'))
-        
-        # request backend to execute the split
-        if self.checkbox_stitch.isChecked():
-            self.backend.split_and_merge(pages)
-        else:
-            self.backend.split(pages)
-    
-    def update_progressbar(self, percentage):
-        self.progressbar.setValue(percentage)
+    def file_save(self) -> str:
+        filepath = QFileDialog.getExistingDirectory(
+            parent=self,
+            caption="Choose save directory"
+        )
+        return filepath
 
+    def show_added_files(self, filenames:list[str]):
+        self.label_files.setText(" | ".join(filenames))
 
+    def show_file_metadata(self, pdf):
+        """
+        Default dictionary in case entries are not provided by the pdf. We
+        also make the metadata keys case insensitive.
+        """
+        metadata_default = {
+            '/author': 'Unknown',
+            '/creator': 'Unknown',
+            '/producer': 'Unknown',
+            '/creationdate': 'XX00010101000000'
+        }
+        metadata = {k.lower(): v for k,v in pdf.metadata.items()}
+        metadata = {**metadata_default, **metadata}
 
-
-if __name__ == "__main__":
-    
-    def start_logger():
-        logging.basicConfig(
-            level=logging.WARNING,
-            format="%(asctime)s [%(levelname)s] %(message)s",
-            handlers=[
-                logging.StreamHandler()
-            ]
+        self.label_pagenumber.setText("%d"%pdf.numPages)
+        self.label_author.setText(metadata['/author'])
+        self.label_creator.setText(metadata['/creator'])
+        self.label_producer.setText(metadata['/producer'])
+        self.label_creation_date.setText(
+            datetime.strptime(metadata['/creationdate'][2:16], f'%Y%m%d%H%M%S').strftime("%m/%d/%Y, %H:%M:%S")
         )
     
-    def run_app():
-        app = QtWidgets.QApplication(sys.argv)
-        mainwin = GUI()
-        mainwin.show()
-        app.exec_()
+    def remove_file_metadata(self):
+        self.label_pagenumber.setText("")
+        self.label_author.setText("")
+        self.label_creator.setText("")
+        self.label_producer.setText("")
+        self.label_creation_date.setText("")
+
+    def show_file_preview(self, pdf):
+        self.PDFviewer.settings().setAttribute( QWebEngineSettings.PluginsEnabled, True)
+        self.PDFviewer.settings().setAttribute( QWebEngineSettings.PdfViewerEnabled, True)
+        self.PDFviewer.load(QUrl.fromUserInput(pdf))
     
+    def remove_file_preview(self):
+        self.PDFviewer.load(QUrl.fromUserInput(""))
+
+    def toggle_split_merge(self):
+        self.radiobutton_splitpages.setChecked(not self.radiobutton_splitpages.isChecked)
+        self.radiobutton_mergepages.setChecked(not self.radiobutton_mergepages.isChecked)
     
-    start_logger()
-    run_app()
+    def get_split_pages(self) -> list[int]:
+        pages_intext = self.lineedit_selectpages.text()
+
+        pages = []
+        if pages_intext != "":
+            pages_intextarray = list(pages_intext.split(","))
+            for idx,string in enumerate(pages_intextarray):
+                if string == '':
+                    previous_page = pages[-1]
+                    next_page = int(pages_intextarray[idx+1])
+                    for p in range(previous_page+1, next_page):
+                        pages.append(p)
+                else:
+                    pages.append(int(string))
+            self.lineedit_selectpages.setText(str(pages).strip('[]'))
+
+        return pages
+
+
+
+class Controller(QObject):
+    def __init__(self, view, model):
+        super().__init__()
+        self._view = view
+        self._model = model
+
+        # connect file explorer buttons
+        self._view.button_findpdf.clicked.connect(self.selectpdf)
+        self._view.button_deletepdf.clicked.connect(self.removepdf)
+
+        # connect radiobuttons that split or merge
+        self._view.radiobutton_mergepages.toggled.connect(self.toggle_split_mode)
+
+        # connect file preview and execute buttons
+        self._view.button_preview.clicked.connect
+        self._view.button_confirm.clicked.connect(self.execute)
+
+    def toggle_split_mode(self, mode):
+        self._view.toggle_split_merge()
+        self._model.toggle_mode()
+
+    def selectpdf(self):
+        filepath = self._view.file_load()
+        if filepath.endswith('.pdf'):
+            self._model.pdf = filepath
+            self._view.show_file_metadata(self._model.pdf)
+            self._view.show_file_preview(filepath)
+            self._view.show_added_files(self._model._pdf_filenames)
+
+    def removepdf(self):
+        del self._model.pdf
+        if self._model.pdf is not None:
+            self._view.show_file_metadata(self._model.pdf)
+            self._view.show_file_preview(self._model._pdf_filepaths[-1])
+        else:
+            self._view.remove_file_preview()
+            self._view.remove_file_metadata()
+            self._view.reset_lineedit_filepath()
+        self._view.show_added_files(self._model._pdf_filenames)
+    
+    def execute(self):
+        pages = self._view.get_split_pages()
+        save_folder = self._view.file_save(
+            # filename=self._model._pdf_filepaths[-1].split('/')[:-1]
+        )
+        if save_folder != "":
+            self._model.split(pages, save_folder)
+            self._view.reset_lineedit_pages()
+
+
+
+class Model(QObject):
+    def __init__(self):
+        self._pdf = None
+        self._pdf_filepaths = []
+        self._pdf_filenames = []
+        self._mode = "split"
+    
+    @property
+    def pdf(self):
+        return self._pdf
+    
+    @pdf.setter
+    def pdf(self, filepath: str):
+        self._pdf = PdfReader(filepath, "rb")
+        self._pdf_filepaths.append(filepath)
+        self._pdf_filenames.append(filepath.rsplit('/')[-1])
+    
+    @pdf.deleter
+    def pdf(self):
+        if len(self._pdf_filepaths) > 1:
+            self._pdf_filepaths.pop()
+            self._pdf_filenames.pop()
+            self._pdf = PdfReader(self._pdf_filepaths[-1], "rb")
+        else:
+            self._pdf = None
+            self._pdf_filepaths = []
+            self._pdf_filenames = []
+
+    def toggle_mode(self):
+        if self._mode == "split":
+            self._mode = "merge"
+        else:
+            self._mode = "split"
+
+    def split(self, pages:list[str], folder:str) -> None:
+        filename = self._pdf_filenames[-1].rstrip(".pdf")
+        if self._mode == "split":
+            for i in range(self._pdf.numPages):
+                if i+1 in pages:
+                    output = PdfWriter()
+                    output.addPage(self._pdf.getPage(i))
+                    with open(os.path.join(folder, filename+"_page%d.pdf" % (i+1)), "wb") as stream:
+                        output.write(stream)
+        elif self._mode == "merge":
+            for i in range(self._pdf.numPages):
+                if i+1 in pages:
+                    output.addPage(self._pdf.getPage(i))
+            with open(os.path.join(folder, filename, "_splitmerge.pdf"), "wb") as stream:
+                output.write(stream)
+        else:
+            raise Exception("Splitting mode not recognized")
+    
+
+
+class App(QApplication):
+    def __init__(self, sys_argv):
+        super(App, self).__init__(sys_argv)
+        self.model = Model()
+        self.view = View()
+        self.controller = Controller(self.view, self.model)
+        self.view.show()
+
+
+
+if __name__ == '__main__':
+    app = App(sys.argv)
+    sys.exit(app.exec_())
