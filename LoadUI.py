@@ -1,20 +1,22 @@
 import os
 import sys
 
+from datetime import datetime
+from PyPDF2 import PdfWriter, PdfReader
 from PyQt5.QtCore import QObject, QUrl
 from PyQt5.QtWidgets import QApplication, QDialog, QFileDialog
 from PyQt5.QtWebEngineWidgets import QWebEngineSettings
 from PyQt5.uic import loadUi
 
-from PyPDF2 import PdfWriter, PdfReader
-from datetime import datetime
+import resources
 
 
 """
 To do:
-- Add more metadata in GUI
 - Give more space to QWebEngine to show page numbers
-- Add checks in controller
+- Preview button functionality
+- unittests
+- GUI formatting
 """
 
 
@@ -50,12 +52,25 @@ class View(QDialog):
         self.label_files.setText(" | ".join(filenames))
 
     def show_file_metadata(self, pdf):
+        """
+        Default dictionary in case entries are not provided by the pdf. We
+        also make the metadata keys case insensitive.
+        """
+        metadata_default = {
+            '/author': 'Unknown',
+            '/creator': 'Unknown',
+            '/producer': 'Unknown',
+            '/creationdate': 'XX00010101000000'
+        }
+        metadata = {k.lower(): v for k,v in pdf.metadata.items()}
+        metadata = {**metadata_default, **metadata}
+
         self.label_pagenumber.setText("%d"%pdf.numPages)
-        self.label_author.setText(pdf.metadata['/Author'])
-        self.label_creator.setText(pdf.metadata['/Creator'])
-        self.label_producer.setText(pdf.metadata['/Producer'])
+        self.label_author.setText(metadata['/author'])
+        self.label_creator.setText(metadata['/creator'])
+        self.label_producer.setText(metadata['/producer'])
         self.label_creation_date.setText(
-            datetime.strptime(pdf.metadata['/CreationDate'][2:-1], f'%Y%m%d%H%M%S').strftime("%m/%d/%Y, %H:%M:%S")
+            datetime.strptime(metadata['/creationdate'][2:16], f'%Y%m%d%H%M%S').strftime("%m/%d/%Y, %H:%M:%S")
         )
     
     def remove_file_metadata(self):
@@ -78,21 +93,20 @@ class View(QDialog):
         self.radiobutton_mergepages.setChecked(not self.radiobutton_mergepages.isChecked)
     
     def get_split_pages(self) -> list[int]:
-        # parse string to comma-separated string array
         pages_intext = self.lineedit_selectpages.text()
-        pages_intextarray = list(pages_intext.split(","))
-        
-        # fill in the page gaps
+
         pages = []
-        for idx,string in enumerate(pages_intextarray):
-            if string == '':
-                previous_page = pages[-1]
-                next_page = int(pages_intextarray[idx+1])
-                for p in range(previous_page+1, next_page):
-                    pages.append(p)
-            else:
-                pages.append(int(string))
-        self.lineedit_selectpages.setText(str(pages).strip('[]'))
+        if pages_intext != "":
+            pages_intextarray = list(pages_intext.split(","))
+            for idx,string in enumerate(pages_intextarray):
+                if string == '':
+                    previous_page = pages[-1]
+                    next_page = int(pages_intextarray[idx+1])
+                    for p in range(previous_page+1, next_page):
+                        pages.append(p)
+                else:
+                    pages.append(int(string))
+            self.lineedit_selectpages.setText(str(pages).strip('[]'))
 
         return pages
 
@@ -118,14 +132,14 @@ class Controller(QObject):
     def toggle_split_mode(self, mode):
         self._view.toggle_split_merge()
         self._model.toggle_mode()
-        print(self._model._mode)
 
     def selectpdf(self):
         filepath = self._view.file_load()
-        self._model.pdf = filepath
-        self._view.show_file_metadata(self._model.pdf)
-        self._view.show_file_preview(filepath)
-        self._view.show_added_files(self._model._pdf_filenames)
+        if filepath.endswith('.pdf'):
+            self._model.pdf = filepath
+            self._view.show_file_metadata(self._model.pdf)
+            self._view.show_file_preview(filepath)
+            self._view.show_added_files(self._model._pdf_filenames)
 
     def removepdf(self):
         del self._model.pdf
@@ -143,8 +157,9 @@ class Controller(QObject):
         save_folder = self._view.file_save(
             # filename=self._model._pdf_filepaths[-1].split('/')[:-1]
         )
-        self._model.split(pages, save_folder)
-        self._view.reset_lineedit_pages()
+        if save_folder != "":
+            self._model.split(pages, save_folder)
+            self._view.reset_lineedit_pages()
 
 
 
